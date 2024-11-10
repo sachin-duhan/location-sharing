@@ -19,11 +19,8 @@ A Node.js backend for a location-sharing application using **Express**, **MongoD
 
 Create a `.env` file with the following:
 
-```plaintext
-PORT=3000
-JWT_SECRET=your_jwt_secret_key
-NATS_URL=nats://nats:4222
-MONGO_URI=mongodb://mongo:27017/ride-sharing
+```bash
+cp .env.example .env
 ```
 
 ### 2. Install Dependencies
