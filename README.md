@@ -1,4 +1,4 @@
-# Location steam - NATS WS
+# Location stream - NATS WS
 A Node.js backend for a location-sharing application using **Express**, **MongoDB**, **NATS** messaging, and **JWT** authentication. This application provides endpoints for user authentication, ride orders, and location updates.
 
 ## Features
