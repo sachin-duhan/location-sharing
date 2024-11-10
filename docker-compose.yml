@@ -1,0 +1,46 @@
+version: '3.9'
+
+services:
+  # Node.js App Service
+  app:
+    build: .
+    volumes:
+      - .:/usr/src/app   # Mount current directory for live changes in dev
+      - /usr/src/app/node_modules # Prevent mounting over node_modules
+    ports:
+      - "${PORT}:${PORT}" # Use PORT variable from .env file
+    environment:
+      - PORT=${PORT}
+      - JWT_SECRET=${JWT_SECRET}
+      - NATS_URL=${NATS_URL}
+      - MONGO_URI=${MONGO_URI}
+    depends_on:
+      - nats
+      - mongo
+    profiles:
+      - dev
+      - prod
+
+  # NATS Service
+  nats:
+    image: nats
+    ports:
+      - "4222:4222"
+    profiles:
+      - dev
+      - prod
+
+  # MongoDB Service
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    profiles:
+      - dev
+      - prod
+
+volumes:
+  mongo_data:
+    driver: local
