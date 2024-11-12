@@ -21,12 +21,16 @@ docker-down:
 
 # View application logs
 logs:
-	docker-compose logs -f app
+	docker-compose logs -f app frontend
 
 # Clean up Docker volumes
 docker-clean:
 	docker-compose down -v
 
-# run tests for the aapplication
+# Run tests for the application
 test:
 	npm test
+
+# Run debug script with specified folder path
+debug:
+	@bash debug.sh $(path)

@@ -1,14 +1,16 @@
-version: '3.9'
+networks:
+  app_network:
+    driver: bridge
 
 services:
-  # Node.js App Service
+  # Backend Service
   app:
     build: .
     volumes:
-      - .:/usr/src/app   # Mount current directory for live changes in dev
-      - /usr/src/app/node_modules # Prevent mounting over node_modules
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
     ports:
-      - "${PORT}:${PORT}" # Use PORT variable from .env file
+      - "${PORT}:${PORT}"
     environment:
       - PORT=${PORT}
       - JWT_SECRET=${JWT_SECRET}
@@ -17,18 +19,34 @@ services:
     depends_on:
       - nats
       - mongo
-    profiles:
-      - dev
-      - prod
+    networks:
+      - app_network
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./web:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - PORT=5173
+    command: npm run dev -- --host 0.0.0.0
+    depends_on:
+      - app
+    networks:
+      - app_network
 
   # NATS Service
   nats:
     image: nats
     ports:
       - "4222:4222"
-    profiles:
-      - dev
-      - prod
+    networks:
+      - app_network
 
   # MongoDB Service
   mongo:
@@ -37,9 +55,8 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-    profiles:
-      - dev
-      - prod
+    networks:
+      - app_network
 
 volumes:
   mongo_data:
