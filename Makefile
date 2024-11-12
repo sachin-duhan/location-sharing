@@ -21,7 +21,7 @@ docker-down:
 
 # View application logs
 logs:
-	docker-compose logs -f app frontend
+	docker-compose logs -f app
 
 # Clean up Docker volumes
 docker-clean:
