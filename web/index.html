@@ -1,11 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATS Pulse</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NATS Location Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    header { margin: 20px; text-align: center; }
+    #content { max-width: 600px; margin: auto; text-align: center; }
+    button { padding: 10px 20px; font-size: 16px; }
+  </style>
 </head>
 <body>
-    <h1>Welcome to tracking</h1>
+  <header>
+    <h1>Location Tracking App</h1>
+    <h2 id="userIdDisplay"></h2>
+  </header>
+  
+  <div id="content">
+    <button id="loginButton">Connect to NATS</button>
+    <p id="connectionStatus"></p>
+    <p id="locationStatus"></p>
+    <div id="activeUsers">
+      <h3>Active Users</h3>
+      <ul id="userList"></ul>
+    </div>
+  </div>
+
+  <script type="module">
+    import { connect, StringCodec } from "https://cdn.jsdelivr.net/npm/nats.ws/+esm";
+
+    const sc = StringCodec();
+    let userId = `user_${Math.floor(Math.random() * 1000)}`;
+    document.getElementById("userIdDisplay").textContent = `User ID: ${userId}`;
+
+    // Store active users' locations
+    const activeUsers = {};
+
+    async function connectToNATS() {
+      try {
+        // Connect to the NATS WebSocket server
+        const nc = await connect({ servers: "ws://localhost:8080" });
+        const js = nc.jetstream();
+
+        document.getElementById('connectionStatus').textContent = "Connected to NATS WebSocket";
+
+        // Function to generate random latitude and longitude
+        function getRandomLocation() {
+          return {
+            latitude: (Math.random() * 180 - 90).toFixed(4),  // Latitude between -90 and +90
+            longitude: (Math.random() * 360 - 180).toFixed(4) // Longitude between -180 and +180
+          };
+        }
+
+        // Publish random location updates at intervals
+        setInterval(async () => {
+          const { latitude, longitude } = getRandomLocation();
+          const locationUpdate = {
+            userId,
+            latitude,
+            longitude,
+            timestamp: new Date().toISOString(),
+          };
+          document.getElementById('locationStatus').textContent = `Your Location: (${latitude}, ${longitude})`;
+
+          // Publish location update
+          await js.publish("location.updates", sc.encode(JSON.stringify(locationUpdate)));
+        }, 5000); // Update location every 5 seconds
+
+        // Pull messages manually instead of subscribing as a push consumer
+        const pullSubscription = await js.pullSubscribe("location.updates", {
+          config: { durable_name: "location-consumer" }
+        });
+
+        // Poll for messages every second
+        setInterval(async () => {
+          for (const msg of await pullSubscription.pull({ batch: 10 })) {
+            const data = JSON.parse(sc.decode(msg.data));
+            updateActiveUsers(data);
+            msg.ack();
+          }
+        }, 1000);
+      } catch (error) {
+        console.error("Failed to connect to NATS:", error);
+      }
+    }
+
+    // Update the active users' list and display their locations
+    function updateActiveUsers(locationData) {
+      activeUsers[locationData.userId] = {
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+        timestamp: locationData.timestamp
+      };
+      displayActiveUsers();
+    }
+
+    // Display active users and their latest locations
+    function displayActiveUsers() {
+      const userList = document.getElementById("userList");
+      userList.innerHTML = ""; // Clear the list
+      for (const [userId, location] of Object.entries(activeUsers)) {
+        if (userId !== userId) {  // Exclude the current user's ID
+          const entry = document.createElement("li");
+          entry.textContent = `${userId}: (${location.latitude}, ${location.longitude}) at ${new Date(location.timestamp).toLocaleTimeString()}`;
+          userList.appendChild(entry);
+        }
+      }
+    }
+
+    // Event listener for Connect button
+    document.getElementById('loginButton').addEventListener('click', connectToNATS);
+  </script>
 </body>
 </html>
